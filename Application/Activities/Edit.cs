@@ -1,6 +1,9 @@
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.Errors;
+using FluentValidation;
 using MediatR;
 using Persistence;
 
@@ -25,6 +28,19 @@ namespace Application.Activities
             public string Venue { get; set; }
         }
 
+        public class CommandValidator : AbstractValidator<Command>
+        {
+            public CommandValidator()
+            {
+                RuleFor(x => x.Title).NotEmpty();
+                RuleFor(x => x.Description).NotEmpty();
+                RuleFor(x => x.Category).NotEmpty();
+                RuleFor(x => x.Date).NotEmpty();
+                RuleFor(x => x.Venue).NotEmpty();
+                RuleFor(x => x.City).NotEmpty();
+            }
+        }
+
         public class Handler : IRequestHandler<Command>
         {
             private readonly DataContext _context;
@@ -35,16 +51,16 @@ namespace Application.Activities
 
             public async Task<Unit> Handle(Command request, CancellationToken cancellationToken)
             {
-                var activityFromDb = await _context.Activities.FindAsync(request.Id);
-                if (activityFromDb == null)
-                    throw new Exception("Could not find activity.");
+                var activityFromDB = await _context.Activities.FindAsync(request.Id);
+                if (activityFromDB == null)
+                    throw new RestException(HttpStatusCode.NotFound, new {activity = "Not found"});
 
-                activityFromDb.Title = request.Title ?? activityFromDb.Title;
-                activityFromDb.Description = request.Description ?? activityFromDb.Description;
-                activityFromDb.Category = request.Category ?? activityFromDb.Category;
-                activityFromDb.Date = request.Date ?? activityFromDb.Date;
-                activityFromDb.City = request.City ?? activityFromDb.City;
-                activityFromDb.Venue = request.Venue ?? activityFromDb.Venue;
+                activityFromDB.Title = request.Title ?? activityFromDB.Title;
+                activityFromDB.Description = request.Description ?? activityFromDB.Description;
+                activityFromDB.Category = request.Category ?? activityFromDB.Category;
+                activityFromDB.Date = request.Date ?? activityFromDB.Date;
+                activityFromDB.City = request.City ?? activityFromDB.City;
+                activityFromDB.Venue = request.Venue ?? activityFromDB.Venue;
 
                 var success = await _context.SaveChangesAsync() > 0;
 
